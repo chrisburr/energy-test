@@ -7,14 +7,14 @@
 This assumes gcc has been installed using homebrew.
 
 ```bash
-g++-7 -o energy_test -std=c++1z -Ofast -march=native -fopt-info -Wall energy_test.cpp -fopenmp
+g++-7 -o energy_test -std=c++1z -Ofast -march=native -fopt-info -Wall -I. energy_test.cpp -fopenmp
 ```
 
 ### Manchester machines
 
 ```bash
 source /cvmfs/sft.cern.ch/lcg/external/gcc/6.2.0/x86_64-slc6-gcc62-opt/setup.sh
-g++ -o energy_test -std=c++1z -Ofast -march=native -fopt-info -Wall energy_test.cpp -fopenmp
+g++ -o energy_test -std=c++1z -Ofast -march=native -fopt-info -Wall -I. energy_test.cpp -fopenmp
 ```
 
 ## Running
@@ -28,6 +28,6 @@ Prepare the data:
 Run the energy test:
 
 ```bash
-time ./mine data/csv/sample0-d0.csv data/csv/sample0-d0bar.csv
+time ./energy_test --max-events=10000 --n-permutations=100 data/csv/sample0-d0bar.csv data/csv/sample0-d0.csv
 ```
 
