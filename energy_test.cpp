@@ -131,9 +131,9 @@ int main(int argc, char *argv[]) {
     data_1_limit = args::get(max_events);
     data_2_limit = args::get(max_events);
   } else {
-    if (data_1_limit)
+    if (max_events_1)
       data_1_limit = args::get(max_events_1);
-    if (data_2_limit)
+    if (max_events_2)
       data_2_limit = args::get(max_events_2);
   }
 
