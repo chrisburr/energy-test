@@ -57,7 +57,7 @@ const std::vector<Event> read_file(const std::string filename, const size_t n_ev
 
 double compute_distance(const std::vector<Event> &data_1, const std::vector<Event> &data_2, const bool upper_only) {
     double total = 0;
-    #pragma omp parallel for reduction(+:total)
+    #pragma omp parallel for reduction(+:total) schedule(static, 1)
     for (size_t i=0; i < data_1.size(); ++i) {
         auto event_1 = data_1[i];
         for (size_t j=(upper_only ? i+1 : 0); j < data_2.size(); ++j) {
