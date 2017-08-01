@@ -12,7 +12,7 @@
 #define EXACT 0
 
 const double delta = 0.5;
-const double divisor = 1 / (1024.0 * 2 * delta * delta);
+const double divisor = 2 / (256.0 * 2 * delta * delta);
 
 #if EXACT
 double my_exp(double x) {
@@ -23,7 +23,6 @@ double my_exp(double x) {
     x = 1 - x * divisor;
     x *= x; x *= x; x *= x; x *= x;
     x *= x; x *= x; x *= x; x *= x;
-    x *= x; x *= x;
     return x;
 }
 #endif
@@ -34,6 +33,7 @@ struct Event {
   double s24;
   double s34;
   double s134;
+  double half_mag_squared;
 };
 
 const std::vector<Event> read_file(const std::string filename, const size_t n_events) {
@@ -50,28 +50,27 @@ const std::vector<Event> read_file(const std::string filename, const size_t n_ev
   while (std::getline(file, line) && events.size() < n_events) {
     Event e;
     file >> e.s12 >> e.s13 >> e.s24 >> e.s34 >> e.s134;
+    e.half_mag_squared = 0.5 * (e.s12*e.s12 + e.s13*e.s13 + e.s24*e.s24 + e.s34*e.s34 + e.s134*e.s134);
     events.push_back(e);
   }
   return events;
 }
 
 double compute_distance(const std::vector<Event> &data_1, const std::vector<Event> &data_2, const bool upper_only) {
-    double total = 0;
-    #pragma omp parallel for reduction(+:total) schedule(static, 1)
-    for (size_t i=0; i < data_1.size(); ++i) {
-        auto event_1 = data_1[i];
-        for (size_t j=(upper_only ? i+1 : 0); j < data_2.size(); ++j) {
-            auto event_2 = data_2[j];
-            double distance_squared =
-                (event_1.s12 - event_2.s12) * (event_1.s12 - event_2.s12) +
-                (event_1.s13 - event_2.s13) * (event_1.s13 - event_2.s13) +
-                (event_1.s24 - event_2.s24) * (event_1.s24 - event_2.s24) +
-                (event_1.s34 - event_2.s34) * (event_1.s34 - event_2.s34) +
-                (event_1.s134 - event_2.s134) * (event_1.s134 - event_2.s134);
-            total += my_exp(distance_squared);
-        }
+  double total = 0;
+  #pragma omp parallel for reduction(+:total) schedule(static, 1)
+  for (size_t i=0; i < data_1.size(); ++i) {
+    auto event_1 = data_1[i];
+    for (size_t j=(upper_only ? i+1 : 0); j < data_2.size(); ++j) {
+      auto event_2 = data_2[j];
+      double distance_squared = event_1.half_mag_squared + event_2.half_mag_squared - (
+        event_1.s13 * event_2.s13 + event_1.s12 * event_2.s12 +
+        event_1.s24 * event_2.s24 + event_1.s34 * event_2.s34 +
+        event_1.s134 * event_2.s134);
+      total += my_exp(distance_squared);
     }
-    return total;
+  }
+  return total;
 }
 
 double compute_statistic(const std::vector<Event> &data_1, const std::vector<Event> &data_2, const bool debug = false) {
