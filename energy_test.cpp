@@ -1,11 +1,13 @@
 #include <algorithm>
+#include <cmath>
 #include <cstdlib>
+#include <exception>
 #include <fstream>
 #include <iostream>
 #include <map>
+#include <random>
 #include <string>
 #include <vector>
-#include <cmath>
 
 #include <args.hxx>
 
@@ -38,18 +40,19 @@ struct Event {
 
 const std::vector<Event> read_file(const std::string filename, const size_t n_events) {
   std::fstream file(filename, std::ios_base::in);
-  if (!file) {
-    std::cerr << "Error opening file " << filename << std::endl;
-    exit(-1);
-  }
+  if (!file)
+    throw std::runtime_error("Error opening file " + filename);
 
   std::vector<Event> events;
   events.reserve(std::min((size_t) 5000000, n_events));
 
   std::string line;
   while (std::getline(file, line) && events.size() < n_events) {
+    std::istringstream iss(line);
     Event e;
-    file >> e.s12 >> e.s13 >> e.s24 >> e.s34 >> e.s134;
+    iss >> e.s12 >> e.s13 >> e.s24 >> e.s34 >> e.s134;
+    if (iss.fail())
+      throw std::runtime_error("Error reading line " + std::to_string(events.size()+1) + " in "  + filename);
     e.half_mag_squared = 0.5 * (e.s12*e.s12 + e.s13*e.s13 + e.s24*e.s24 + e.s34*e.s34 + e.s134*e.s134);
     events.push_back(e);
   }
@@ -92,7 +95,7 @@ double compute_statistic(const std::vector<Event> &data_1, const std::vector<Eve
   return dist_11 + dist_22 - dist_12;
 }
 
-int main(int argc, char *argv[]) {
+int run_energy_test(int argc, char *argv[]) {
   #if EXACT
     std::cout << "Running in exact mode" << std::endl;
   #else
@@ -126,6 +129,7 @@ int main(int argc, char *argv[]) {
   // Parse the maximum number of events to use
   size_t data_1_limit = std::numeric_limits<size_t>::max();
   size_t data_2_limit = std::numeric_limits<size_t>::max();
+
   if (max_events) {
     data_1_limit = args::get(max_events);
     data_2_limit = args::get(max_events);
@@ -141,7 +145,6 @@ int main(int argc, char *argv[]) {
   std::cout << "Dataset 1 size is " << dataset_1.size() << std::endl;
   const auto dataset_2 = read_file(args::get(filename_2), data_2_limit);
   std::cout << "Dataset 2 size is " << dataset_2.size() << std::endl;
-
   std::cout << std::endl;
 
   // Compute the test statistic for the current dataset
@@ -169,5 +172,15 @@ int main(int argc, char *argv[]) {
       std::cout << ": T=" << test_statistic << std::endl;
     }
   }
+
   return 0;
+}
+
+int main(int argc, char *argv[]) {
+  try {
+    return run_energy_test(argc, argv);
+  } catch (std::runtime_error& e) {
+    std::cerr << e.what() << std::endl;
+    return -1;
+  }
 }
