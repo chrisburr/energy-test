@@ -18,7 +18,7 @@ const double divisor = 2 / (256.0 * 2 * delta * delta);
 
 #if EXACT
 double my_exp(double x) {
-    return std::exp(-x/(2*delta*delta));
+    return std::exp(-x/(delta*delta));
 }
 #else
 double my_exp(double x) {
