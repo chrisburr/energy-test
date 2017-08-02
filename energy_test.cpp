@@ -109,8 +109,12 @@ int run_energy_test(int argc, char *argv[]) {
   args::ValueFlag<size_t> max_events_1(parser, "max events 1", "Maximum number of events to use from dataset 1", {"max-events-1"});
   args::ValueFlag<size_t> max_events_2(parser, "max events 2", "Maximum number of events to use from dataset 2", {"max-events-2"});
   args::ValueFlag<size_t> max_events(parser, "max events", "Max number of events in each dataset", {"max-events"});
+  args::ValueFlag<size_t> seed(parser, "seed", "seed for permutations", {"seed"});
+  args::ValueFlag<size_t> max_permutation_events_1(parser, "max permutation events 1", "Max number of events in dataset 1 for permutations",
+                                                   {"max-permutation-events-1"});
   args::Positional<std::string> filename_1(parser, "dataset 1", "Filename for the first dataset");
   args::Positional<std::string> filename_2(parser, "dataset 2", "Filename for the second dataset");
+  args::Positional<std::string> output_fn(parser, "output filename", "Output filename for the permutation test statistics", {"output-fn"});
   try {
     parser.ParseCLI(argc, argv);
     if (!filename_1 || !filename_2)
@@ -160,17 +164,61 @@ int run_energy_test(int argc, char *argv[]) {
     all_events.insert(all_events.end(), dataset_1.begin(), dataset_1.end());
     all_events.insert(all_events.end(), dataset_2.begin(), dataset_2.end());
 
-    auto N = args::get(n_permutations);
-    for (size_t i = 0; i < N; ++i) {
-      std::cout << "Calculating permutation " << i+1 << " of " << N;
-      std::random_shuffle(all_events.begin(), all_events.end());
+    size_t N = args::get(n_permutations);
 
-      const std::vector<Event> data_1(all_events.begin(), all_events.begin()+dataset_1.size());
-      const std::vector<Event> data_2(all_events.begin()+dataset_1.size(), all_events.end());
+    // Scale the number of events used in permutations
+    size_t n_events_1 = dataset_1.size();
+    size_t n_events_2 = dataset_2.size();
+    if (max_permutation_events_1) {
+      n_events_1 = std::min(args::get(max_permutation_events_1), n_events_1);
+      n_events_2 = std::round(n_events_1 * ((double) dataset_2.size()/ (double) dataset_1.size()));
+    }
+
+    // Set up the random number generator
+    int random_seed = std::mt19937::default_seed;
+    if (seed)
+      random_seed = args::get(seed);
+    std::mt19937 random_generator(random_seed);
+
+    // Open the output file
+    std::string output_filename;
+    if (output_fn) {
+      output_filename = args::get(output_fn);
+    } else {
+      output_filename = "Ts." + std::to_string(dataset_1.size()) + "_";
+      output_filename += std::to_string(dataset_2.size()) + "_";
+      output_filename += std::to_string(n_permutations) + "_";
+      output_filename += std::to_string(random_seed) + ".txt";
+    }
+    std::ofstream output_file;
+    output_file.open(output_filename);
+
+    std::cout << "Running " << N << " permutations of " << n_events_1 << " and "
+              << n_events_2 << " events using seed " << random_seed << std::endl;
+    std::cout << "Output filename is " << output_filename << std::endl;
+
+    // Counter to avoid shuffling every time, start large to do a first shuffle
+    size_t events_to_skip = std::numeric_limits<size_t>::max();
+
+    for (size_t i = 0; i < N; ++i) {
+      if ((i+1) % std::max((size_t) 100, N/100) == 0)
+        std::cout << "Calculating permutation " << i+1 << " of " << N << std::endl;
+
+      // Reshuffle if we've ran out of events
+      if (events_to_skip + n_events_1 + n_events_2 > all_events.size()) {
+        std::shuffle(all_events.begin(), all_events.end(), random_generator);
+        events_to_skip = 0;
+      }
+
+      const std::vector<Event> data_1(all_events.begin()+events_to_skip, all_events.begin()+events_to_skip+n_events_1);
+      events_to_skip += n_events_1;
+      const std::vector<Event> data_2(all_events.begin()+events_to_skip, all_events.begin()+events_to_skip+n_events_2);
+      events_to_skip += n_events_2;
 
       const double test_statistic = compute_statistic(data_1, data_2);
-      std::cout << ": T=" << test_statistic << std::endl;
+      output_file << test_statistic << std::endl;
     }
+    output_file.close();
   }
 
   return 0;
