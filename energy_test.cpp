@@ -187,7 +187,7 @@ int run_energy_test(int argc, char *argv[]) {
     } else {
       output_filename = "Ts." + std::to_string(dataset_1.size()) + "_";
       output_filename += std::to_string(dataset_2.size()) + "_";
-      output_filename += std::to_string(n_permutations) + "_";
+      output_filename += std::to_string(N) + "_";
       output_filename += std::to_string(random_seed) + ".txt";
     }
     std::ofstream output_file;
