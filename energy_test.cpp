@@ -198,7 +198,7 @@ int run_energy_test(int argc, char *argv[]) {
     std::cout << "Output filename is " << output_filename << std::endl;
 
     // Counter to avoid shuffling every time, start large to do a first shuffle
-    size_t events_to_skip = std::numeric_limits<size_t>::max();
+    size_t events_to_skip = all_events.size()+1;
 
     for (size_t i = 0; i < N; ++i) {
       if ((i+1) % std::max((size_t) 100, N/100) == 0)
