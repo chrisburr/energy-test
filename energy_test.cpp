@@ -105,6 +105,7 @@ int run_energy_test(int argc, char *argv[]) {
   // Parse the command line arguments
   args::ArgumentParser parser("CPU based energy test");
   args::HelpFlag help(parser, "help", "Display this help menu", {'h', "help"});
+  args::Flag permutations_only(parser, "permutations only", "Only calculate permutations", {"permutations-only"});
   args::ValueFlag<size_t> n_permutations(parser, "n_permutations", "Number of permutations to run", {"n-permutations"});
   args::ValueFlag<size_t> max_events_1(parser, "max events 1", "Maximum number of events to use from dataset 1", {"max-events-1"});
   args::ValueFlag<size_t> max_events_2(parser, "max events 2", "Maximum number of events to use from dataset 2", {"max-events-2"});
@@ -151,10 +152,12 @@ int run_energy_test(int argc, char *argv[]) {
   std::cout << "Dataset 2 size is " << dataset_2.size() << std::endl;
   std::cout << std::endl;
 
-  // Compute the test statistic for the current dataset
-  std::cout << "Calculating test statistic for nominal dataset:" << std::endl;
-  const double real_test_statistic = compute_statistic(dataset_1, dataset_2, true);
-  std::cout << "  T = " << real_test_statistic << std::endl;
+  if (!permutations_only) {
+    // Compute the test statistic for the current dataset
+    std::cout << "Calculating test statistic for nominal dataset:" << std::endl;
+    const double real_test_statistic = compute_statistic(dataset_1, dataset_2, true);
+    std::cout << "  T = " << real_test_statistic << std::endl;
+  }
 
   std::cout << std::endl;
 
