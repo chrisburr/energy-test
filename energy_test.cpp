@@ -11,10 +11,10 @@
 
 #include <args.hxx>
 
-#define EXACT 0
+double delta = 0.5;
+double divisor = 2 / (256.0 * 2 * delta * delta);
 
-const double delta = 0.5;
-const double divisor = 2 / (256.0 * 2 * delta * delta);
+#define EXACT 1
 
 #if EXACT
 double my_exp(double x) {
@@ -106,6 +106,7 @@ int run_energy_test(int argc, char *argv[]) {
   args::ArgumentParser parser("CPU based energy test");
   args::HelpFlag help(parser, "help", "Display this help menu", {'h', "help"});
   args::Flag permutations_only(parser, "permutations only", "Only calculate permutations", {"permutations-only"});
+  args::Flag output_write(parser, "output write", "write output Tvalues", {"output-write"});
   args::ValueFlag<size_t> n_permutations(parser, "n_permutations", "Number of permutations to run", {"n-permutations"});
   args::ValueFlag<size_t> max_events_1(parser, "max events 1", "Maximum number of events to use from dataset 1", {"max-events-1"});
   args::ValueFlag<size_t> max_events_2(parser, "max events 2", "Maximum number of events to use from dataset 2", {"max-events-2"});
@@ -113,9 +114,13 @@ int run_energy_test(int argc, char *argv[]) {
   args::ValueFlag<size_t> seed(parser, "seed", "seed for permutations", {"seed"});
   args::ValueFlag<size_t> max_permutation_events_1(parser, "max permutation events 1", "Max number of events in dataset 1 for permutations",
                                                    {"max-permutation-events-1"});
+  args::ValueFlag<double> delta_value(parser, "delta value", "delta_value", {"delta-value"});
   args::Positional<std::string> filename_1(parser, "dataset 1", "Filename for the first dataset");
   args::Positional<std::string> filename_2(parser, "dataset 2", "Filename for the second dataset");
   args::Positional<std::string> output_fn(parser, "output filename", "Output filename for the permutation test statistics", {"output-fn"});
+
+
+   
   try {
     parser.ParseCLI(argc, argv);
     if (!filename_1 || !filename_2)
@@ -131,6 +136,15 @@ int run_energy_test(int argc, char *argv[]) {
     return 1;
   }
 
+  //set delta
+  if (delta_value){
+    delta = args::get(delta_value);
+  }
+  std::cout<<"Distance parameter set to "<< delta <<std::endl;
+  divisor = 2 / (256.0 * 2 * delta * delta);
+ 
+    
+  
   // Parse the maximum number of events to use
   size_t data_1_limit = std::numeric_limits<size_t>::max();
   size_t data_2_limit = std::numeric_limits<size_t>::max();
@@ -151,17 +165,18 @@ int run_energy_test(int argc, char *argv[]) {
   const auto dataset_2 = read_file(args::get(filename_2), data_2_limit);
   std::cout << "Dataset 2 size is " << dataset_2.size() << std::endl;
   std::cout << std::endl;
+  
+  double real_test_statistic = -999;
 
-  if (!permutations_only) {
+  if(!permutations_only){
     // Compute the test statistic for the current dataset
     std::cout << "Calculating test statistic for nominal dataset:" << std::endl;
-    const double real_test_statistic = compute_statistic(dataset_1, dataset_2, true);
+    real_test_statistic = compute_statistic(dataset_1, dataset_2, true);
     std::cout << "  T = " << real_test_statistic << std::endl;
   }
-
   std::cout << std::endl;
-
   if (n_permutations) {
+    
     // Merge the vectors of events so we can shuffle them
     std::vector<Event> all_events;
     all_events.insert(all_events.end(), dataset_1.begin(), dataset_1.end());
@@ -177,6 +192,7 @@ int run_energy_test(int argc, char *argv[]) {
       n_events_2 = std::round(n_events_1 * ((double) dataset_2.size()/ (double) dataset_1.size()));
     }
 
+    double factor =  1.0*(n_events_1+n_events_2)/(1.0*(dataset_1.size()+dataset_2.size()));
     // Set up the random number generator
     int random_seed = std::mt19937::default_seed;
     if (seed)
@@ -185,6 +201,7 @@ int run_energy_test(int argc, char *argv[]) {
 
     // Open the output file
     std::string output_filename;
+   
     if (output_fn) {
       output_filename = args::get(output_fn);
     } else {
@@ -192,13 +209,22 @@ int run_energy_test(int argc, char *argv[]) {
       output_filename += std::to_string(dataset_2.size()) + "_";
       output_filename += std::to_string(N) + "_";
       output_filename += std::to_string(random_seed) + ".txt";
+
     }
+   
     std::ofstream output_file;
-    output_file.open(output_filename);
+    if(output_write){
+      output_file.open(output_filename);
+    }
+    std::ofstream p_output_file;
+    if(!permutations_only){
+      p_output_file.open("pvalues.txt", std::iostream::out | std::iostream::app );
+    }
+    int nsig = 0;
 
     std::cout << "Running " << N << " permutations of " << n_events_1 << " and "
               << n_events_2 << " events using seed " << random_seed << std::endl;
-    std::cout << "Output filename is " << output_filename << std::endl;
+    if(output_write){std::cout << "Output filename is " << output_filename << std::endl;}
 
     // Counter to avoid shuffling every time, start large to do a first shuffle
     size_t events_to_skip = all_events.size()+1;
@@ -219,11 +245,19 @@ int run_energy_test(int argc, char *argv[]) {
       events_to_skip += n_events_2;
 
       const double test_statistic = compute_statistic(data_1, data_2);
-      output_file << test_statistic << std::endl;
+      if(output_write){output_file << test_statistic << std::endl;}
+      if(!permutations_only){
+	if (factor * test_statistic > real_test_statistic){nsig++;} 
+      }
     }
+    if(!permutations_only){
+      p_output_file << delta << " "<< (1.0*nsig)/(1.0*N)  << std::endl;
+      std::cout<<"p value is: "<<(1.0*nsig)/(1.0*N)  << std::endl;
+    }
+    p_output_file.close();
     output_file.close();
   }
-
+  
   return 0;
 }
 
