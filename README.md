@@ -1,4 +1,6 @@
-# Optimised Energy Test
+# Energy test with optimised permutations
+
+[![DOI](https://zenodo.org/badge/113197119.svg)](https://zenodo.org/badge/latestdoi/113197119)
 
 ## Compiling
 
@@ -7,21 +9,21 @@
 This assumes gcc has been installed using homebrew.
 
 ```bash
-g++-7 -o energy_test -std=c++1z -O3 -march=native -fopt-info -Wall -I. energy_test.cpp -fopenmp
+g++-7 -o energy_test -std=c++1z -O3 -march=native -Wall -I. energy_test.cpp -fopenmp
 ```
 
 ### Manchester machines
 
 ```bash
 source /cvmfs/sft.cern.ch/lcg/external/gcc/6.2.0/x86_64-slc6-gcc62-opt/setup.sh
-g++ -o energy_test -std=c++1z -O3 -march=native -fopt-info -Wall -I. energy_test.cpp -fopenmp
+g++ -o energy_test -std=c++1z -O3 -march=native -Wall -I. energy_test.cpp -fopenmp
 ```
 
 ### lxplus
 
 ```bash
 source /cvmfs/sft.cern.ch/lcg/external/gcc/6.2.0/x86_64-slc6-gcc62-opt/setup.sh
-g++ -o energy_test -std=c++1z -O3 -fopt-info -Wall -I. energy_test.cpp -fopenmp
+g++ -o energy_test -std=c++1z -O3 -Wall -I. energy_test.cpp -fopenmp
 ```
 
 ## Input data
