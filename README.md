@@ -4,7 +4,7 @@
 
 The [energy test](https://arxiv.org/abs/math/0309164) is a method for determining if two samples orginate from the same underlying distribution. This implimention can efficiently make use of multiple CPUs, with support for using scaled permutations as described in [TODO].
 
-For an implimentation that can be used with nvidia GPUs, which may be faster for unscaled permutations with large samples (> 10⁷), see [Manet](https://manet.hepforge.org/).
+For an implimentation that can be used with NVIDIA GPUs, which may be faster for unscaled calculations with large samples (> 10⁷ points), see [Manet](https://manet.hepforge.org/).
 
 ## Compiling
 
